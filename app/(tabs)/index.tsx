@@ -1,74 +1,82 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { useEffect, useState, useMemo } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, FlatList, Image, Text, View } from "react-native";
+import MovieCard from "@/components/MovieCard";
+import SearchBar from "@/components/SearchBar";
+import { icons } from "@/constants/icons";
+import { images } from "@/constants/images";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Movie } from "@/interfaces/interfaces";
+import { getMovies } from "@/services/api";
+import { useFetch } from "@/services/useFetch";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function Index() {
+  const [searchKey, setSearchKey] = useState("");
+  const debouncedSearchKey = useDebounce(searchKey.trim(), 500);
 
-export default function HomeScreen() {
+  const {
+    data: movies,
+    isLoading,
+    error,
+    refetch,
+  } = useFetch(() => getMovies({ query: debouncedSearchKey }));
+
+  useEffect(() => {
+    if (debouncedSearchKey !== undefined) {
+      refetch();
+    }
+  }, [debouncedSearchKey]);
+
+  const renderMovieCard = ({ item }: { item: Movie }) => (
+    <View className="w-[31%]">
+      <MovieCard {...item} />
+    </View>
+  );
+
+  const headerTitle = useMemo(
+    () =>
+      debouncedSearchKey
+        ? `Search result for ${debouncedSearchKey}`
+        : "Latest Movies",
+    [debouncedSearchKey]
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <View className="flex-1 bg-primary">
+      <Image source={images.bg} className="absolute z-0 w-full" />
+      <SafeAreaView className="items-center flex-1 px-6">
+        <Image source={icons.logo} className="mb-4" />
+        <SearchBar
+          searchKey={searchKey}
+          placeHolder="Search"
+          setSearchKey={setSearchKey}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#0000ff" className="mt-10" />
+        ) : error ? (
+          <Text className="mt-5 text-center text-red-500">
+            Error: {error.message}
+          </Text>
+        ) : (
+          <View className="w-full">
+            <FlatList
+              data={movies as Movie[]}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderMovieCard}
+              ListHeaderComponent={
+                <Text className="mt-5 mb-3 text-lg font-bold text-white">
+                  {headerTitle}
+                </Text>
+              }
+              showsVerticalScrollIndicator={false}
+              contentContainerClassName="gap-y-4"
+              numColumns={3}
+              columnWrapperClassName="gap-x-3"
+            />
+          </View>
+        )}
+      </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
