@@ -11,6 +11,7 @@ import { getMovies } from "@/services/api";
 import { useFetch } from "@/services/useFetch";
 
 export default function Index() {
+  const [refreshing, setRefreshing] = useState(false);
   const [searchKey, setSearchKey] = useState("");
   const debouncedSearchKey = useDebounce(searchKey.trim(), 500);
 
@@ -20,6 +21,12 @@ export default function Index() {
     error,
     refetch,
   } = useFetch(() => getMovies({ query: debouncedSearchKey }));
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   useEffect(() => {
     if (debouncedSearchKey !== undefined) {
@@ -45,7 +52,7 @@ export default function Index() {
     <View className="flex-1 bg-primary">
       <Image source={images.bg} className="absolute z-0 w-full" />
       <SafeAreaView className="items-center flex-1 px-6">
-        <Image source={icons.logo} className="mb-4" />
+        <Image source={icons.logo} className="my-4" />
         <SearchBar
           searchKey={searchKey}
           placeHolder="Search"
@@ -61,6 +68,8 @@ export default function Index() {
         ) : (
           <View className="w-full">
             <FlatList
+              refreshing={refreshing}
+              onRefresh={onRefresh}
               data={movies as Movie[]}
               keyExtractor={(item) => item.id.toString()}
               renderItem={renderMovieCard}
